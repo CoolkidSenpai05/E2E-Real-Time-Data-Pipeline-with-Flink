@@ -1,0 +1,14 @@
+jobmanager.rpc.address: jobmanager
+rest.port: 18081
+state.backend: rocksdb
+state.backend.incremental: true
+state.checkpoint-storage: filesystem
+blob.server.port: 6124
+query.server.port: 6125
+classloader.resolve-order: parent-first
+jobmanager.archive.fs.cleanup-expired-jobs: false
+jobmanager.archive.fs.job-expiration-time: 24h
+rest.client.max-content-length: 104857600 # 100MB
+taskmanager.network.request-backoff.max: 120000
+heartbeat.timeout: 300000
+akka.ask.timeout: 60s
