@@ -1,0 +1,50 @@
+{
+    "model_info": {
+        "name": "Clickstream Fraud Detection",
+        "version": "1.0.0",
+        "algorithm": "Random Forest",
+        "export_format": "ONNX",
+        "training_date": "2026-05-02 15:20:50"
+    },
+    "input_schema": {
+        "num_features": 21,
+        "features": [
+            "hour",
+            "day_of_week",
+            "is_weekend",
+            "is_night",
+            "url_length",
+            "url_depth",
+            "has_suspicious_path",
+            "purchase_amount",
+            "is_high_value",
+            "log_purchase_amount",
+            "event_page_view",
+            "event_add_to_cart",
+            "event_purchase",
+            "event_logout",
+            "device_mobile",
+            "device_desktop",
+            "device_tablet",
+            "night_mobile",
+            "night_high_value",
+            "mobile_high_value",
+            "amount_per_url_depth"
+        ],
+        "input_type": "float32",
+        "integrated_scaler": false
+    },
+    "performance_metrics": {
+        "f1_score": 0.6811469057898816,
+        "recall": 0.999869994799792,
+        "precision": 0.5165038111547631,
+        "roc_auc": 0.915706487928162
+    },
+    "deployment_config": {
+        "default_threshold": 0.5,
+        "labels": {
+            "0": "normal",
+            "1": "fraud"
+        }
+    }
+}
