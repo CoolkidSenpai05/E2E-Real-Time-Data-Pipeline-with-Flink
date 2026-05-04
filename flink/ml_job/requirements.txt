@@ -1,0 +1,10 @@
+# flink/ml_job/requirements.txt
+# Note: apache-flink is already included in the base Flink Docker image
+# Only install additional dependencies
+confluent-kafka==2.3.0
+numpy==1.24.3
+pandas==2.0.3
+onnxruntime==1.17.1
+scikit-learn==1.3.2
+joblib==1.3.2
+Faker==18.13.0
