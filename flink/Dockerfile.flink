@@ -1,0 +1,60 @@
+# # flink/Dockerfile.flink
+# FROM flink:1.18.1-scala_2.12-java11
+
+# # Cài đặt Python và dependencies
+# RUN apt-get update && apt-get install -y python3 python3-pip
+
+# # Copy requirements và cài đặt
+# COPY ml_job/requirements.txt /opt/flink/ml_job/requirements.txt
+# RUN pip3 install -r /opt/flink/ml_job/requirements.txt
+
+# # Copy source code và model
+# COPY ml_job/ /opt/flink/ml_job/
+
+# # Set Python path
+# ENV PYTHONPATH="/opt/flink/ml_job:${PYTHONPATH}"
+
+# # Verify installation
+# RUN python3 -c "import onnxruntime; print('ONNX Runtime ready')"
+
+FROM flink:1.18.1-scala_2.12-java11
+
+# Install system dependencies
+RUN apt-get update -y && \
+    apt-get install -y python3 python3-pip python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create Python symlink
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Upgrade pip and install wheel/setuptools
+RUN pip3 install --upgrade pip setuptools wheel
+
+# Install apache-flink (Python SDK) matching server version
+RUN pip3 install apache-flink==1.18.1
+
+# Copy requirements and install extra dependencies
+COPY ml_job/requirements.txt /opt/flink/ml_job/requirements.txt
+RUN pip3 install -r /opt/flink/ml_job/requirements.txt
+
+# RUN pip3 install --upgrade pip
+RUN pip3 install onnxruntime==1.17.1  # Hoặc phiên bản mới nhất hiện tại
+
+# Add Kafka connector JARs
+RUN curl -L https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.0.2-1.18/flink-connector-kafka-3.0.2-1.18.jar \
+    -o /opt/flink/lib/flink-connector-kafka-3.0.2-1.18.jar && \
+    curl -L https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1.jar \
+    -o /opt/flink/lib/kafka-clients-3.6.1.jar
+
+# Copy ML job code
+COPY ml_job /opt/flink/ml_job
+
+# Set Python path
+ENV PYTHONPATH="/opt/flink/ml_job:${PYTHONPATH}"
+
+# Verify installations
+RUN python -c "from pyflink.datastream import StreamExecutionEnvironment; print('✅ PyFlink ready')" && \
+    python -c "import onnxruntime; print('✅ ONNX Runtime ready')" && \
+    python -c "import numpy; print('✅ NumPy ready')" && \
+    python -c "import pandas; print('✅ Pandas ready')" && \
+    python -c "import sklearn; print('✅ Scikit-learn ready')"
