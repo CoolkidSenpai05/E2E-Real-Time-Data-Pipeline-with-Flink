@@ -1,0 +1,22 @@
+# Cấu hình chung từ sql-client
+jobmanager.rpc.address: jobmanager
+rest.port: 18081
+state.backend: rocksdb
+state.backend.incremental: true
+state.checkpoint-storage: filesystem
+blob.server.port: 6124
+query.server.port: 6125
+classloader.resolve-order: parent-first
+jobmanager.archive.fs.cleanup-expired-jobs: false
+jobmanager.archive.fs.job-expiration-time: 24h
+rest.client.max-content-length: 104857600
+taskmanager.network.request-backoff.max: 120000
+heartbeat.timeout: 300000
+akka.ask.timeout: 60s
+
+# Cấu hình lưu trữ Checkpoint lên S3 (MinIO) cho ML Job
+state.checkpoints.dir: s3://warehouse/checkpoints/
+s3.endpoint: http://minio:9000
+s3.path.style.access: true
+s3.access-key: admin
+s3.secret-key: password
