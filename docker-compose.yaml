@@ -11,7 +11,8 @@ services:
       - iceberg_net
 
   broker:
-    image: confluentinc/cp-server:7.2.1
+    # image: confluentinc/cp-server:7.2.1
+    image: confluentinc/cp-kafka:7.2.1
     hostname: kafka
     container_name: broker
     depends_on:
@@ -31,6 +32,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -38,38 +40,37 @@ services:
       # Logging settings
       KAFKA_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.apache.kafka=ERROR,kafka=ERROR,kafka.cluster=ERROR,kafka.controller=ERROR,kafka.coordinator=ERROR,kafka.log=ERROR,kafka.server=ERROR,kafka.zookeeper=ERROR,state.change.logger=ERROR
       KAFKA_LOG4J_ROOT_LOGLEVEL: ERROR
-
       # Metrics and telemetry configurations
-      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
-      CONFLUENT_METRICS_ENABLE: 'false'
-      CONFLUENT_TELEMETRY_ENABLED: 'false' # Ensure telemetry is fully disabled
-      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_SUPPORT_METRICS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_TELEMETRY_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      # CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
+      # CONFLUENT_METRICS_ENABLE: 'false'
+      # CONFLUENT_TELEMETRY_ENABLED: 'false' # Ensure telemetry is fully disabled
+      # KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_CONFLUENT_SUPPORT_METRICS_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_CONFLUENT_TELEMETRY_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR: 1
 
     networks:
       - iceberg_net
 
-  control-center:
-    image: confluentinc/cp-enterprise-control-center:7.2.1
-    hostname: control-center
-    container_name: control-center
-    depends_on:
-      broker:
-        condition: service_healthy
-    ports:
-      - 9021:9021
-    environment:
-      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
-      CONTROL_CENTER_REPLICATION_FACTOR: 1
-      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
-      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
-      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
-      PORT: 9021
-    networks:
-      - iceberg_net
+  # control-center:
+  #   image: confluentinc/cp-enterprise-control-center:7.2.1
+  #   hostname: control-center
+  #   container_name: control-center
+  #   depends_on:
+  #     broker:
+  #       condition: service_healthy
+  #   ports:
+  #     - 9021:9021
+  #   environment:
+  #     CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
+  #     CONTROL_CENTER_REPLICATION_FACTOR: 1
+  #     CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+  #     CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+  #     CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+  #     PORT: 9021
+  #   networks:
+  #     - iceberg_net
 
   producer:
     container_name: clickstream-producer
@@ -108,6 +109,29 @@ services:
     networks:
       - iceberg_net
 
+  # taskmanager:
+  #   container_name: taskmanager
+  #   image: flink:1.18.1-scala_2.12-java11
+  #   depends_on:
+  #     - jobmanager
+  #   command: taskmanager
+  #   environment:
+  #     - |
+  #       FLINK_PROPERTIES=
+  #       jobmanager.rpc.address: jobmanager
+  #       rest.port: 18081
+  #       taskmanager.numberOfTaskSlots: 2
+  #       state.backend: rocksdb
+  #       state.backend.incremental: true
+  #       AWS_REGION=us-east-1
+  #       AWS_ACCESS_KEY_ID=admin
+  #       AWS_SECRET_ACCESS_KEY=password
+  #       AWS_DEFAULT_REGION=us-east-1
+  #       S3_ENDPOINT=http://minio:9000
+  #       S3_PATH_STYLE_ACCESS=true
+  #       JAVA_TOOL_OPTIONS=-Daws.accessKeyId=admin -Daws.secretKey=password
+  #   networks:
+  #     - iceberg_net
   taskmanager:
     container_name: taskmanager
     image: flink:1.18.1-scala_2.12-java11
@@ -120,8 +144,17 @@ services:
         jobmanager.rpc.address: jobmanager
         rest.port: 18081
         taskmanager.numberOfTaskSlots: 2
+
+        # 🔥 MEMORY CONFIG (QUAN TRỌNG)
+        taskmanager.memory.process.size: 6g
+        taskmanager.memory.task.off-heap.size: 1g
+        taskmanager.memory.framework.off-heap.size: 512m
+
+        # RocksDB (bạn đang dùng)
         state.backend: rocksdb
         state.backend.incremental: true
+        state.backend.rocksdb.memory.managed: true
+
         AWS_REGION=us-east-1
         AWS_ACCESS_KEY_ID=admin
         AWS_SECRET_ACCESS_KEY=password
@@ -129,7 +162,6 @@ services:
         S3_ENDPOINT=http://minio:9000
         S3_PATH_STYLE_ACCESS=true
         JAVA_TOOL_OPTIONS=-Daws.accessKeyId=admin -Daws.secretKey=password
-
     networks:
       - iceberg_net
 
@@ -158,10 +190,81 @@ services:
       - type: bind
         source: ${PWD}/flink/sql-jobs/clickstream-filtering.sql
         target: /opt/flink/clickstream-filtering.sql
+      - type: bind
+        source: ${PWD}/flink/sql-jobs/fraud_sink_to_iceberg.sql
+        target: /opt/flink/fraud_sink_to_iceberg.sql
+    # volumes:
+    #   - ./flink/sql-client/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+    #   - ./flink/sql-jobs:/opt/flink/sql-jobs
+
+    # /bin/sh -c " /opt/flink/bin/sql-client.sh -f /opt/flink/clickstream-filtering.sql; tail -f /dev/null "
     command: >
-      /bin/sh -c " /opt/flink/bin/sql-client.sh -f /opt/flink/clickstream-filtering.sql; tail -f /dev/null "
+      /bin/sh -c " /opt/flink/bin/sql-client.sh -f /opt/flink/fraud_sink_to_iceberg.sql; tail -f /dev/null "
     networks:
       - iceberg_net
+
+  # Thêm vào docker-compose.yml
+  # flink-ml-job:
+  #   image: flink:1.18.1-scala_2.12-java11
+  #   build:
+  #     context: ./flink
+  #     dockerfile: Dockerfile.flink
+  #   container_name: flink-ml-job
+  #   depends_on:
+  #     - broker # Đã sửa từ kafka thành broker
+  #     - jobmanager
+  #   environment:
+  #     - KAFKA_BROKER=broker:29092 # Dùng port nội bộ 29092
+  #     - INPUT_TOPIC=clickstream
+  #     - OUTPUT_TOPIC=clickstream_labeled
+  #     - ALERT_TOPIC=fraud_alerts
+  #     - FRAUD_THRESHOLD=0.85
+  #     - CHECKPOINT_INTERVAL=60000
+  #     - PARALLELISM=1
+  #     # Các biến AWS vẫn nên giữ ở Env để thư viện AWS SDK nhận diện tốt hơn
+  #     - AWS_ACCESS_KEY_ID=admin
+  #     - AWS_SECRET_ACCESS_KEY=password
+  #     - AWS_REGION=us-east-1
+  #   volumes:
+  #     - ./flink/ml_job:/opt/flink/ml_job
+  #     # Mount file cấu hình vào đúng vị trí của Flink
+  #     # - ./flink/ml_job/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+  #   command: >
+  #     /bin/bash -c "
+  #       sleep 90
+  #       /opt/flink/bin/flink run -py /opt/flink/ml_job/main.py
+  #     "
+  #   networks:
+  #     - iceberg_net
+  #   restart: on-failure
+  flink-ml-job:
+    image: flink:1.18.1-scala_2.12-java11
+    build:
+      context: ./flink
+      dockerfile: Dockerfile.flink
+    container_name: flink-ml-job
+    user: "root" # 🔥 QUAN TRỌNG: Cấp quyền để ghi vào /tmp và /log
+    depends_on:
+      - broker
+      - jobmanager
+    environment:
+      - KAFKA_BROKER=broker:29092
+      - INPUT_TOPIC=clickstream
+      - OUTPUT_TOPIC=clickstream_labeled
+      - ALERT_TOPIC=fraud_alerts
+      - FRAUD_THRESHOLD=0.85
+      - CHECKPOINT_INTERVAL=60000
+      - PARALLELISM=1
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./flink/ml_job:/opt/flink/ml_job
+    command: >
+      /bin/bash -c "sleep 60 && /opt/flink/bin/flink run -m jobmanager:18081 -py /opt/flink/ml_job/main.py --pyFiles /opt/flink/ml_job/"    networks: - iceberg_net
+    networks:
+      - iceberg_net
+    restart: on-failure
 
   minio:
     image: minio/minio
